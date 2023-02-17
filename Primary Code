@@ -1,0 +1,1370 @@
+// **************************************************
+// Custom code for UD101Form
+// Created: 5/2/2022 3:05:01 PM
+// **************************************************
+
+extern alias Erp_Contracts_BO_CCTagSearch;
+
+
+extern alias Erp_Contracts_BO_CCCountCycle;
+extern alias Erp_Contracts_BO_CountTag;
+
+using System;
+using System.ComponentModel;
+using System.Data;
+using System.Diagnostics;
+using System.Windows.Forms;
+using Ice.BO;
+using Erp.BO;
+using Erp.Proxy.BO;
+using Ice.Proxy.BO;
+using Ice.UI;
+using Ice.Lib;
+using Ice.Adapters;
+using Erp.Adapters;
+using Ice.Lib.Customization;
+using Ice.Lib.ExtendedProps;
+using Ice.Lib.Framework;
+using Ice.Lib.Searches;
+using Ice.UI.FormFunctions;
+using Ice.Core;
+using Ice.Lib.Broadcast;
+using System.Linq;
+
+public class Script
+{
+	// ** Wizard Insert Location - Do Not Remove 'Begin/End Wizard Added Module Level Variables' Comments! **
+	// Begin Wizard Added Module Level Variables **
+	private EpiBaseAdapter oTrans_adapter;
+	private DataTable CCHdr_Column;
+	private DataTable CCDtl_Column;
+	private DataTable CCTag_Column;
+	private string _SysRowIDCCHdr;
+	private DataView UD101_DataView;
+	private EpiDataView edvUD101A;
+	// End Wizard Added Module Level Variables **
+
+	// Add Custom Module Level Variables Here **
+
+	private CCCountCycleAdapter adapterCCCountCycle;
+	private CountTagAdapter adapterCountTag;
+	private EpiDataView edvUD101;
+	private System.Data.DataRow edvUD101Row;
+	private System.Data.DataRow edvUD101ARow;
+	private EpiDataView edvCCHdr;
+	private EpiDataView edvCCDtl;
+	private EpiDataView edvCCTag;
+
+	public void InitializeCustomCode()
+	{
+		// ** Wizard Insert Location - Do not delete 'Begin/End Wizard Added Variable Initialization' lines **
+		// Begin Wizard Added Variable Initialization
+
+		this.oTrans_adapter = ((EpiBaseAdapter)(this.csm.TransAdaptersHT["oTrans_adapter"]));
+
+		InitializeCCCountCycleAdapter();
+		InitializeCountTagAdapter();
+
+		this._SysRowIDCCHdr = string.Empty;
+		this.baseToolbarsManager.ToolClick += new Infragistics.Win.UltraWinToolbars.ToolClickEventHandler(this.baseToolbarsManager_ToolClickForCCHdr);
+		this.UD101Form.BeforeToolClick += new Ice.Lib.Framework.BeforeToolClickEventHandler(this.UD101Form_BeforeToolClickForCCHdr);
+		this.UD101Form.AfterToolClick += new Ice.Lib.Framework.AfterToolClickEventHandler(this.UD101Form_AfterToolClickForCCHdr);
+		this.UD101_Row.EpiRowChanged += new EpiRowChanged(this.UD101_AfterRowChangeForCCHdr);
+		this.UD101_DataView = this.UD101_Row.dataView;
+		this.UD101_DataView.ListChanged += new ListChangedEventHandler(this.UD101_DataView_ListChangedForCCHdr);
+		this.UD101_Row.BeforeResetDataView += new Ice.Lib.Framework.EpiDataView.BeforeResetDataViewDelegate(this.UD101_BeforeResetDataViewForCCHdr);
+		this.UD101_Row.AfterResetDataView += new Ice.Lib.Framework.EpiDataView.AfterResetDataViewDelegate(this.UD101_AfterResetDataViewForCCHdr);
+		this.edvUD101A = ((EpiDataView)(this.oTrans.EpiDataViews["UD101A"]));
+
+		this.edvUD101A.EpiViewNotification += new EpiViewNotification(this.edvUD101A_EpiViewNotification);
+		// End Wizard Added Variable Initialization
+
+		// Begin Wizard Added Custom Method Calls
+
+		this.btnKey1.Click += new System.EventHandler(this.btnKey1_Click);
+		this.btnTest.Click += new System.EventHandler(this.btnTest_Click);
+		this.btnGetTags.Click += new System.EventHandler(this.btnGetTags_Click);
+		SetExtendedProperties();
+		this.btnMatchScans.Click += new System.EventHandler(this.btnMatchScans_Click);
+		this.eucBinList.BeforeDropDown += new System.ComponentModel.CancelEventHandler(this.eucBinList_BeforeDropDown);
+		this.txtScanEntry.Leave += new System.EventHandler(this.txtScanEntry_Leave);
+		this.txtScanValue_Lot.Leave += new System.EventHandler(this.txtScanValue_Lot_Leave);
+		this.txtScanValue_Bin.Leave += new System.EventHandler(this.txtScanValue_Bin_Leave);
+		this.txtScanValue_PartNum.Leave += new System.EventHandler(this.txtScanValue_PartNum_Leave);
+		this.txtScanValue_Qty.Leave += new System.EventHandler(this.txtScanValue_Qty_Leave);
+		this.btnValidateAllScans.Click += new System.EventHandler(this.btnValidateAllScans_Click);
+		this.btnAddBlankTag.Click += new System.EventHandler(this.btnAddBlankTag_Click);
+		// End Wizard Added Custom Method Calls
+
+	}
+	
+	private void InitializeCCCountCycleAdapter()
+	{
+		// Initialize EpiDataView field.
+		this.edvUD101 = ((EpiDataView)(this.oTrans.EpiDataViews["UD101"]));
+		this.edvUD101Row = edvUD101.CurrentDataRow;
+
+		// Create an instance of the Adapter.
+		this.adapterCCCountCycle = new CCCountCycleAdapter(this.oTrans);
+		this.adapterCCCountCycle.BOConnect();
+
+		// Add Adapter Table to List of Views
+		// This allows you to bind controls to the custom UD Table
+		
+		this.edvCCHdr = new EpiDataView();
+		this.edvCCHdr.dataView = new DataView(adapterCCCountCycle.CCCountCycleData.CCHdr);
+		this.edvCCHdr.AddEnabled = false;
+		
+		this.edvCCDtl = new EpiDataView();
+		this.edvCCDtl.dataView = new DataView(adapterCCCountCycle.CCCountCycleData.CCDtl);
+		this.edvCCDtl.AddEnabled = false;
+	
+		// Add the CCHdr and CCDtl Views
+		if ((this.oTrans.EpiDataViews.ContainsKey("CCHdr") == false))
+		{
+			this.oTrans.Add("CCHdr", this.edvCCHdr);
+		}
+		if ((this.oTrans.EpiDataViews.ContainsKey("CCDtl") == false))
+		{
+			this.oTrans.Add("CCDtl", this.edvCCDtl);
+		}
+		
+		// Initialize DataTable variable
+		this.CCHdr_Column = this.adapterCCCountCycle.CCCountCycleData.CCHdr;
+		this.CCDtl_Column = this.adapterCCCountCycle.CCCountCycleData.CCDtl;
+
+		// Set the parent view / keys for UD child view
+		string[] edvCCHdr_parentKeyFields = new string[1];
+		string[] edvCCHdr_childKeyFields = new string[1];
+		edvCCHdr_parentKeyFields[0] = "Key1";
+		edvCCHdr_childKeyFields[0] = "SysRowID";
+		this.edvCCHdr.SetParentView(edvUD101, edvCCHdr_parentKeyFields, edvCCHdr_childKeyFields);
+		
+
+		// Set the parent view / keys for UD child view
+		string[] edvCCDtl_parentKeyFields = new string[7];
+		string[] edvCCDtl_childKeyFields = new string[7];
+		edvCCDtl_parentKeyFields[0] = "Company";
+		edvCCDtl_childKeyFields[0] = "Company";
+		edvCCDtl_parentKeyFields[1] = "Plant_c";
+		edvCCDtl_childKeyFields[1] = "Plant";
+		edvCCDtl_parentKeyFields[2] = "WarehouseCode_c";
+		edvCCDtl_childKeyFields[2] = "WarehouseCode";
+		edvCCDtl_parentKeyFields[3] = "CCYear_c";
+		edvCCDtl_childKeyFields[3] = "CCYear";
+		edvCCDtl_parentKeyFields[4] = "CCMonth_c";
+		edvCCDtl_childKeyFields[4] = "CCMonth";
+		edvCCDtl_parentKeyFields[5] = "FullPhysical_c";
+		edvCCDtl_childKeyFields[5] = "FullPhysical";
+		edvCCDtl_parentKeyFields[6] = "CycleSeq_c";
+		edvCCDtl_childKeyFields[6] = "CycleSeq";
+		this.edvCCDtl.SetParentView(edvUD101, edvCCDtl_parentKeyFields, edvCCDtl_childKeyFields);
+		
+		if ((this.oTrans.PrimaryAdapter != null))
+		{
+			// this.oTrans.PrimaryAdapter.GetCurrentDataSet(Ice.Lib.Searches.DataSetMode.RowsDataSet).Tables.Add(this.edvCCHdr.dataView.Table.Clone())
+		}
+	}
+
+	private void InitializeCountTagAdapter()
+	{
+		// Initialize EpiDataView field.
+		this.edvUD101 = ((EpiDataView)(this.oTrans.EpiDataViews["UD101"]));
+		this.edvUD101Row = edvUD101.CurrentDataRow;
+		
+		this.adapterCountTag = new CountTagAdapter(this.oTrans);
+		this.adapterCountTag.BOConnect();
+
+		this.edvCCTag = new EpiDataView();
+		this.edvCCTag.dataView = new DataView(adapterCountTag.CountTagData.CCTag);
+		this.edvCCTag.AddEnabled = false;
+
+		if ((this.oTrans.EpiDataViews.ContainsKey("CCTag") == false))
+		{
+			this.oTrans.Add("CCTag", this.edvCCTag);
+		}
+
+		// Initialize DataTable variable
+		this.CCTag_Column = this.adapterCountTag.CountTagData.CCTag;
+
+		// Set the parent view / keys for UD child view
+		string[] edvCCTag_parentKeyFields = new string[7];
+		string[] edvCCTag_childKeyFields = new string[7];
+		edvCCTag_parentKeyFields[0] = "Company";
+		edvCCTag_childKeyFields[0] = "Company";
+		edvCCTag_parentKeyFields[1] = "Plant_c";
+		edvCCTag_childKeyFields[1] = "Plant";
+		edvCCTag_parentKeyFields[2] = "WarehouseCode_c";
+		edvCCTag_childKeyFields[2] = "WarehouseCode";
+		edvCCTag_parentKeyFields[3] = "CCYear_c";
+		edvCCTag_childKeyFields[3] = "CCYear";
+		edvCCTag_parentKeyFields[4] = "CCMonth_c";
+		edvCCTag_childKeyFields[4] = "CCMonth";
+		edvCCTag_parentKeyFields[5] = "FullPhysical_c";
+		edvCCTag_childKeyFields[5] = "FullPhysical";
+		edvCCTag_parentKeyFields[6] = "CycleSeq_c";
+		edvCCTag_childKeyFields[6] = "CycleSeq";
+		this.edvCCTag.SetParentView(edvUD101, edvCCTag_parentKeyFields, edvCCTag_childKeyFields);
+	}
+
+	public void DestroyCustomCode()
+	{
+		// ** Wizard Insert Location - Do not delete 'Begin/End Wizard Added Object Disposal' lines **
+		// Begin Wizard Added Object Disposal
+
+		this.btnKey1.Click -= new System.EventHandler(this.btnKey1_Click);
+		this.oTrans_adapter = null;
+		this.btnTest.Click -= new System.EventHandler(this.btnTest_Click);
+		if ((this.adapterCCCountCycle != null))
+		{
+			this.adapterCCCountCycle.Dispose();
+			this.adapterCCCountCycle = null;
+		}
+		if ((this.adapterCountTag != null))
+		{
+			this.adapterCountTag.Dispose();
+			this.adapterCountTag = null;
+		}
+		this.edvCCHdr = null;
+		this.edvCCDtl = null;
+		this.edvCCTag = null;		
+		this.CCHdr_Column = null;
+		this.CCDtl_Column = null;
+		this.CCTag_Column = null;
+		this._SysRowIDCCHdr = null;
+		this.baseToolbarsManager.ToolClick -= new Infragistics.Win.UltraWinToolbars.ToolClickEventHandler(this.baseToolbarsManager_ToolClickForCCHdr);
+		this.UD101Form.BeforeToolClick -= new Ice.Lib.Framework.BeforeToolClickEventHandler(this.UD101Form_BeforeToolClickForCCHdr);
+		this.UD101Form.AfterToolClick -= new Ice.Lib.Framework.AfterToolClickEventHandler(this.UD101Form_AfterToolClickForCCHdr);
+		this.UD101_Row.EpiRowChanged -= new EpiRowChanged(this.UD101_AfterRowChangeForCCHdr);
+		this.UD101_DataView.ListChanged -= new ListChangedEventHandler(this.UD101_DataView_ListChangedForCCHdr);
+		this.UD101_DataView = null;
+		this.UD101_Row.BeforeResetDataView -= new Ice.Lib.Framework.EpiDataView.BeforeResetDataViewDelegate(this.UD101_BeforeResetDataViewForCCHdr);
+		this.UD101_Row.AfterResetDataView -= new Ice.Lib.Framework.EpiDataView.AfterResetDataViewDelegate(this.UD101_AfterResetDataViewForCCHdr);
+		this.btnGetTags.Click -= new System.EventHandler(this.btnGetTags_Click);
+		this.btnMatchScans.Click -= new System.EventHandler(this.btnMatchScans_Click);
+
+		this.edvUD101A = null;
+		this.edvUD101A.EpiViewNotification -= new EpiViewNotification(this.edvUD101A_EpiViewNotification);
+		this.eucBinList.BeforeDropDown -= new System.ComponentModel.CancelEventHandler(this.eucBinList_BeforeDropDown);
+		this.txtScanEntry.Leave -= new System.EventHandler(this.txtScanEntry_Leave);
+		this.txtScanValue_Lot.Leave -= new System.EventHandler(this.txtScanValue_Lot_Leave);
+		this.txtScanValue_Bin.Leave -= new System.EventHandler(this.txtScanValue_Bin_Leave);
+		this.txtScanValue_PartNum.Leave -= new System.EventHandler(this.txtScanValue_PartNum_Leave);
+		this.txtScanValue_Qty.Leave -= new System.EventHandler(this.txtScanValue_Qty_Leave);
+		this.btnValidateAllScans.Click -= new System.EventHandler(this.btnValidateAllScans_Click);
+		this.btnAddBlankTag.Click -= new System.EventHandler(this.btnAddBlankTag_Click);
+		// End Wizard Added Object Disposal
+
+		// Begin Custom Code Disposal
+
+		// End Custom Code Disposal
+
+	}
+	
+	private void GetCountTagData()
+	{
+		if (edvUD101.CurrentDataRow.IsNull("CCYear_c") == false)
+		{
+			//UD101_DataView[0]["Key1"].ToString();
+			int CCYear = (int)edvUD101.CurrentDataRow["CCYear_c"];
+			int CCMonth = (int)edvUD101.CurrentDataRow["CCMonth_c"];
+			bool FullPhysical = (bool)edvUD101.CurrentDataRow["FullPhysical_c"];
+			string Plant = edvUD101.CurrentDataRow["Plant_c"].ToString();
+			string WarehouseCode = edvUD101.CurrentDataRow["WarehouseCode_c"].ToString();
+			int CycleSeq = (int)edvUD101.CurrentDataRow["CycleSeq_c"];
+			
+			//MessageBox.Show("Beginning Tag Search | Year: " + CCYear.ToString() + " Month: " + CCMonth.ToString());
+				
+			// Build where clause for search.
+			string whereClause = String.Format(
+				"CCTag.CCYear = {0} AND CCTag.CCMonth = {1} AND CCTag.FullPhysical = \'{2}\' AND CCTag.Plant = \'{3}\' AND CCTag.WarehouseCode = \'{4}\' AND CCTag.CycleSeq = {5}"
+				, CCYear.ToString(), CCMonth.ToString(), FullPhysical.ToString(), Plant, WarehouseCode, CycleSeq.ToString()
+				);
+			System.Collections.Hashtable whereClauses = new System.Collections.Hashtable(1);
+			whereClauses.Add("CCTag", whereClause);
+			
+			//MessageBox.Show("Where: " + whereClause.ToString());
+			
+			// Call the adapter search.
+			SearchOptions searchOptions = SearchOptions.CreateRuntimeSearch(whereClauses, DataSetMode.RowsDataSet);
+			this.adapterCountTag.InvokeSearch(searchOptions);
+			
+			//MessageBox.Show("Result Count: " + this.adapterCountTag.CountTagData.CCTag.Rows.Count.ToString());
+			if ((this.adapterCountTag.CountTagData.CCTag.Rows.Count > 0))
+			{
+				this.edvCCTag.Row = 0;
+			} else
+			{
+				this.edvCCTag.Row = -1;
+			}
+		}
+
+		// Notify that data was updated.
+		this.edvCCTag.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCTag.Row, this.edvCCTag.Column));
+		
+		oTrans.Refresh();
+	}
+
+	private void GetCCHdrData(string SysRowID)
+	{
+		if ((this._SysRowIDCCHdr != SysRowID))
+		{
+			// Build where clause for search.
+			string whereClause = "SysRowID = \'" + SysRowID + "\'";
+			System.Collections.Hashtable whereClauses = new System.Collections.Hashtable(1);
+			whereClauses.Add("CCHdr", whereClause);
+
+			// Call the adapter search.
+			SearchOptions searchOptions = SearchOptions.CreateRuntimeSearch(whereClauses, DataSetMode.RowsDataSet);
+			this.adapterCCCountCycle.InvokeSearch(searchOptions);
+
+			if ((this.adapterCCCountCycle.CCCountCycleData.CCHdr.Rows.Count > 0))
+			{
+				this.edvCCHdr.Row = 0;
+
+			} else
+			{
+				this.edvCCHdr.Row = -1;
+			}
+			
+			if ((this.adapterCCCountCycle.CCCountCycleData.CCDtl.Rows.Count > 0))
+			{
+				this.edvCCDtl.Row = 0;
+			} else
+			{
+				this.edvCCDtl.Row = -1;
+			}
+
+			// Notify that data was updated.
+			this.edvCCHdr.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCHdr.Row, this.edvCCHdr.Column));
+			this.edvCCDtl.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCDtl.Row, this.edvCCDtl.Column));
+			
+			// Set key fields to their new values.
+			this._SysRowIDCCHdr = SysRowID;
+			//oTrans.Refresh();
+		}
+	}
+
+	private void SearchOnCCHdrSearchAdapterShowDialog()
+	{
+		edvUD101Row = edvUD101.CurrentDataRow;
+		// Wizard Generated Search Method
+		// You will need to call this method from another method in custom code
+		// For example, [Form]_Load or [Button]_Click
+		if (edvUD101Row != null && edvUD101Row["Key1"].ToString().Length > 0)
+		{
+			MessageBox.Show("Error | GUID Value already set");
+			return;
+		}
+
+		bool recSelected;
+		string whereClause = string.Empty;
+		System.Data.DataSet dsCCHdrSearchAdapter = Ice.UI.FormFunctions.SearchFunctions.listLookup(this.oTrans, "CCHdrSearchAdapter", out recSelected, true, whereClause);
+		if (recSelected)
+		{
+			System.Data.DataRow adapterRow = dsCCHdrSearchAdapter.Tables[0].Rows[0];
+
+			// Map Search Fields to Application Fields
+			
+			if ((edvUD101Row != null))
+			{
+				edvUD101Row.BeginEdit();
+				edvUD101Row["Key1"] = adapterRow["SysRowID"];
+				edvUD101Row["Key2"] = adapterRow["Plant"] + "~" + adapterRow["WarehouseCode"] + "~" + adapterRow["CCYear"] + "~" + adapterRow["CCMonth"] + "~" + adapterRow["FullPhysical"] + "~" + adapterRow["CycleSeq"];
+				edvUD101Row["WarehouseCode_c"] = adapterRow["WarehouseCode"];
+				edvUD101Row["CCMonth_c"] = adapterRow["CCMonth"];
+				edvUD101Row["CCYear_c"] = adapterRow["CCYear"];
+				edvUD101Row["CycleSeq_c"] = adapterRow["CycleSeq"];
+				edvUD101Row["FullPhysical_c"] = adapterRow["FullPhysical"];
+				edvUD101Row["Plant_c"] = adapterRow["Plant"];
+				edvUD101Row.EndEdit();
+
+				string key1 = UD101_DataView[0]["Key1"].ToString();
+				GetCCHdrData(key1);
+			}
+			else
+			{
+				txtCCGUID.Text = adapterRow["SysRowID"].ToString();
+			}
+		}
+	}
+
+	private void UD101Form_Load(object sender, EventArgs args)
+	{
+		Ice.Core.Session session = (Ice.Core.Session)
+		UD101Form.Session;
+		txtScannedBy.Text = session.UserID;
+		SetDynamicBarcodeType();
+	}
+
+	private void btnKey1_Click(object sender, System.EventArgs args)
+	{
+		if(edvUD101.CurrentDataRow == null)
+		{
+			EpiMessageBox.Show("No Advanced Cycle Count row selected");
+			return;
+		}
+		SearchOnCCHdrSearchAdapterShowDialog();
+	}
+	
+	private void btnGetCCHdrData_Click(object sender, System.EventArgs args)
+	{
+		string key1 = UD101_DataView[0]["Key1"].ToString();
+		GetCCHdrData(key1);
+	}
+	
+	private void btnTest_Click(object sender, System.EventArgs args)
+	{
+		ValidateAllScans();
+		
+		if(edvUD101A != null)
+		{	
+			string WarehouseCode =""; 
+			string BinNum =""; 
+			string PartNum =""; 
+			string PartDescription =""; 
+			string PartIUM =""; 
+			bool TrackLots = false; 
+			decimal SellingFactor = (decimal)0; 
+			string PricePerCode =""; 
+			string BinDescription =""; 
+			
+			//EpiMessageBox.Show("Testing Validationg.");
+			foreach (DataRow edvUD101A_row in edvUD101A.dataView.Table.Rows)
+			{	
+				if ((bool)edvUD101A_row["ScanValid_c"])
+				{
+					WarehouseCode = edvUD101A_row["WarehouseCode_c"].ToString();
+					BinNum = edvUD101A_row["BinNum_c"].ToString();
+					PartNum = edvUD101A_row["PartNum_c"].ToString();
+					
+					GetNewBlankTagDetails(WarehouseCode,BinNum,PartNum,ref PartDescription,ref PartIUM,ref TrackLots,ref SellingFactor,ref PricePerCode,ref BinDescription);
+					EpiMessageBox.Show("PartDescription: " + PartDescription);
+				}
+			}
+		}
+	}
+	
+	private void btnValidateAllScans_Click(object sender, System.EventArgs args)
+	{
+		ValidateAllScans();
+	}
+	
+	private void CreateBlankTag()
+	{
+		int FirstTag;
+		int LastTag;
+		//this.adapterCountTag.GetNewCCTag(edvUD101.CurrentDataRow["Plant_c"].ToString(), edvUD101.CurrentDataRow["WarehouseCode_c"].ToString());
+		this.adapterCountTag.GenerateTags(out FirstTag,out LastTag, 1, 0, edvUD101.CurrentDataRow["Company"].ToString(), edvUD101.CurrentDataRow["Plant_c"].ToString(),  edvUD101.CurrentDataRow["WarehouseCode_c"].ToString(), (int)edvUD101.CurrentDataRow["CCYear_c"], (int)edvUD101.CurrentDataRow["CCMonth_c"], (int)edvUD101.CurrentDataRow["CycleSeq_c"], (bool)edvUD101.CurrentDataRow["FullPhysical_c"]);
+		edvCCTag.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCTag.Row, this.edvCCTag.Column));
+		adapterCountTag.Update();
+		
+		UpdateUD101ARow();
+		//GetCountTagData();
+	}
+	
+	private void btnMatchScans_Click(object sender, System.EventArgs args)
+	{
+		ProcessValidCounts();
+	}
+
+	private bool CheckScanTagMatch(		
+		string Company,
+		string WarehouseCode, 
+		string Plant,
+		int CCYear,
+		int CCMonth,
+		bool FullPhysical,
+		int CycleSeq,
+		string BinNum, 
+		string PartNum,
+		string LotNum
+		)
+	{
+		DynamicQueryAdapter queryAdapter = new DynamicQueryAdapter(this.oTrans);
+		queryAdapter.BOConnect();
+		
+		QueryExecutionDataSet parameters;
+		parameters = new QueryExecutionDataSet();
+		parameters.ExecutionParameter.AddExecutionParameterRow("Company", Company, "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("WarehouseCode", WarehouseCode, "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("Plant", Plant, "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("CCYear", CCYear.ToString(), "int", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("CCMonth", CCMonth.ToString(), "int", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("FullPhysical", FullPhysical.ToString(), "bit", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("CycleSeq", CycleSeq.ToString(), "int", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("BinNum", BinNum, "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("PartNum", PartNum, "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("LotNum", LotNum, "nvarchar", false, Guid.NewGuid(),"A");
+
+		queryAdapter.ExecuteByID("AdvCycleCount_CheckScanMatch", parameters);
+		
+		if (queryAdapter.QueryResults.Tables["Results"].Rows.Count > 0)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	
+	private string CheckForBlankTags(		
+		string Company,
+		string WarehouseCode, 
+		string Plant,
+		int CCYear,
+		int CCMonth,
+		bool FullPhysical,
+		int CycleSeq
+		)
+	{
+		DynamicQueryAdapter queryAdapter = new DynamicQueryAdapter(this.oTrans);
+		queryAdapter.BOConnect();
+		
+		QueryExecutionDataSet parameters;
+		parameters = new QueryExecutionDataSet();
+		parameters.ExecutionParameter.AddExecutionParameterRow("Company", Company, "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("WarehouseCode", WarehouseCode, "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("Plant", Plant, "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("CCYear", CCYear.ToString(), "int", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("CCMonth", CCMonth.ToString(), "int", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("FullPhysical", FullPhysical.ToString(), "bit", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("CycleSeq", CycleSeq.ToString(), "int", false, Guid.NewGuid(),"A");
+
+		queryAdapter.ExecuteByID("AdvCycleCount_CheckBlankTags", parameters);
+
+		if (queryAdapter.QueryResults.Tables["Results"].Rows.Count > 0)
+		{
+			return queryAdapter.QueryResults.Tables["Results"].Rows[0]["CCTag_TagNum"].ToString();
+		}
+		else
+		{
+			return "";
+		}
+	}
+	
+	private void ProcessValidCounts()
+	{
+		EpiDataView edvUD101 = ((EpiDataView)(this.oTrans.EpiDataViews["UD101"]));
+		EpiDataView edvUD101A = ((EpiDataView)(this.oTrans.EpiDataViews["UD101A"]));
+		EpiDataView edvCCTag  = ((EpiDataView)(this.oTrans.EpiDataViews["CCTag"]));
+		
+		// Checks for rows to process
+		int ActiveRowsCount = edvUD101A.dataView.Table.AsEnumerable().Where(x => (bool)x["AddedToTag_c"] == false && eucBinList.Text.ToUpper() == x["BinNum_c"].ToString().ToUpper()).Count();
+
+		MessageBox.Show("Beginning Tag Matching | Count: " + ActiveRowsCount.ToString());
+		
+		if (ActiveRowsCount > 0)
+		{
+			foreach (DataRow edvUD101_row in edvUD101.dataView.Table.Rows)
+			{		
+				foreach (DataRow edvUD101A_row in edvUD101A.dataView.Table.Rows)
+				{
+					string ScanWarehouseCode = edvUD101A_row["WarehouseCode_c"].ToString();
+					string ScanBinNum = edvUD101A_row["BinNum_c"].ToString();
+					string ScanPartNum = edvUD101A_row["PartNum_c"].ToString();
+					string ScanLotNum = edvUD101A_row["LotNum_c"].ToString();
+					
+					// Check if the Scan has already been submitted and if the Bin matches the process bin
+					if ( eucBinList.Text.ToUpper() == ScanBinNum.ToUpper() 
+						&& (bool)edvUD101A_row["AddedToTag_c"] == false)
+					{
+						// sets Validation variables
+						bool ScanValidWhse = false;
+						bool ScanValidBin = false;
+						bool ScanValidPart = false;
+						bool ScanValidLot = false;
+						bool ScanLotRequired = false;
+						bool ScanValid = false;
+						
+						//Run validation test.
+						ValidateFields(ScanWarehouseCode, ScanBinNum, ScanPartNum, ScanLotNum, ref ScanValidWhse, ref ScanValidBin, ref ScanValidPart, ref ScanValidLot, ref ScanLotRequired);
+
+						//Update validation results to UD101A row.
+						edvUD101A_row.BeginEdit();
+						edvUD101A_row["WhsValid_c"] = ScanValidWhse;
+						edvUD101A_row["BinValid_c"] = ScanValidBin;
+						edvUD101A_row["PartValid_c"] = ScanValidPart;
+						edvUD101A_row["LotValid_c"] = ScanValidLot;
+						edvUD101A_row["LotReq_c"] = ScanLotRequired;
+						edvUD101A_row["RowMod"]= "U";
+						if (ScanValidWhse && ScanValidBin && ScanValidPart && (ScanValidLot || !ScanLotRequired))
+						{
+							ScanValid = true;
+						}
+						edvUD101A_row["ScanValid_c"] = ScanValid;
+						edvUD101A_row.EndEdit();
+						//Update the affected row. This might be skipped.
+						UpdateUD101ARow();
+						
+						// Check validation results to proceed.
+						if ((bool)edvUD101A_row["ScanValid_c"] == true)
+						{	
+							// Set scan variables required now that the scan has been confirmed valid.
+							string ScanCompany = edvUD101_row["company"].ToString();
+							string ScanPlant = edvUD101_row["Plant_c"].ToString();
+							int ScanCCYear = (int)edvUD101_row["CCYear_c"];
+							int ScanCCMonth = (int)edvUD101_row["CCMonth_c"];
+							bool ScanFullPhysical = (bool)edvUD101_row["FullPhysical_c"];
+							int ScanCycleSeq = (int)edvUD101_row["CycleSeq_c"];
+							bool ScanTagHasMatch = CheckScanTagMatch(ScanCompany, ScanWarehouseCode, ScanPlant, ScanCCYear, ScanCCMonth, ScanFullPhysical, ScanCycleSeq, ScanBinNum, ScanPartNum, ScanLotNum);
+							
+							// Checks if the Validated Scan matches any CCTags in the current Cycle Count.
+							if (ScanTagHasMatch == true)
+							{
+								// Loop through CCTag rows
+								foreach (DataRow edvCCTag_row in edvCCTag.dataView.Table.Rows)
+								{
+									// Set CCTag Row Variables
+									string CCTagCompany = edvCCTag_row["Company"].ToString();
+									string CCTagWarehouseCode = edvCCTag_row["WarehouseCode"].ToString();
+									string CCTagBinNum = edvCCTag_row["BinNum"].ToString();
+									string CCTagPartNum = edvCCTag_row["PartNum"].ToString();
+									string CCTagLotNum = edvCCTag_row["LotNum"].ToString();
+									
+									// Check if CCTag and Scan key values match
+									if ( (bool)edvCCTag_row["TagReturned"] == false 
+										&& eucBinList.Text.ToUpper() == CCTagBinNum.ToUpper()
+										&& CCTagCompany == ScanCompany 
+										&& CCTagWarehouseCode.ToUpper() == ScanWarehouseCode 
+										&& CCTagBinNum.ToUpper() == ScanBinNum.ToUpper() 
+										&& CCTagPartNum.ToUpper() == ScanPartNum.ToUpper() 
+										&& CCTagLotNum.ToUpper() == ScanLotNum.ToUpper() 
+										)
+									{
+										// Tag has been matched to a valid scan. 
+										// Add count value to CCTag
+										edvCCTag_row.BeginEdit();
+										edvCCTag_row["RowMod"]= "U";
+										edvCCTag_row["BinNum"]=edvUD101A_row["BinNum_c"];
+										edvCCTag_row["PartNum"]=edvUD101A_row["PartNum_c"];
+										edvCCTag_row["LotNum"]=edvUD101A_row["LotNum_c"];
+										edvCCTag_row["CountedBy"]=edvUD101A_row["CountedBy_c"];
+										edvCCTag_row["CountedDate"]=edvUD101A_row["CountedDate_c"];
+										edvCCTag_row["CountedQty"] = (decimal)edvCCTag_row["CountedQty"] + (decimal)edvUD101A_row["CountedQty_c"];
+										edvCCTag_row.EndEdit();
+										
+										// Mark Count as counted.
+										edvUD101A_row.BeginEdit();
+										edvUD101A_row["RowMod"]= "U";
+										edvUD101A_row["AddedToTag_c"] = true;
+										edvUD101A_row.EndEdit();
+										
+										//Notify the Data Views of udpates.
+										this.edvUD101A.Notify(new EpiNotifyArgs(this.oTrans, this.edvUD101A.Row, this.edvUD101A.Column));
+										this.edvCCTag.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCTag.Row, this.edvCCTag.Column));
+										UpdateUD101ARow();
+										// Finish the loop as the match has been found.
+										break;
+									}
+								}
+							}
+							// Because there is no tag matched a blank tag will need to be used.
+							else
+							{
+								// Check if there are already blank tags.
+								string BlankTagNum = CheckForBlankTags(ScanCompany, ScanWarehouseCode, ScanPlant, ScanCCYear, ScanCCMonth, ScanFullPhysical, ScanCycleSeq).ToString();
+								// 
+								if (BlankTagNum == "")
+								{
+									// Create Blank tag
+									CreateBlankTag();
+									GetCountTagData();
+									// Get new TagID
+									BlankTagNum = CheckForBlankTags(ScanCompany, ScanWarehouseCode, ScanPlant, ScanCCYear, ScanCCMonth, ScanFullPhysical, ScanCycleSeq).ToString();
+								}
+								// Find the Blank tag.
+								foreach (DataRow edvCCTag_row in edvCCTag.dataView.Table.Rows)
+								{
+									// Set CCTag Row Variables
+									String CCTagTagNum = edvCCTag_row["TagNum"].ToString();
+									if(CCTagTagNum == BlankTagNum)
+									{
+										string CCTagPartDescription = ""; 
+										string CCTagPartIUM = ""; 
+										bool CCTagTrackLots = false; 
+										decimal CCTagSellingFactor = (decimal)0.0; 
+										string CCTagPricePerCode = ""; 
+										string CCTagBinDescription = ""; 
+										
+										GetNewBlankTagDetails(ScanWarehouseCode, ScanBinNum, ScanPartNum, ref CCTagPartDescription, ref CCTagPartIUM, ref CCTagTrackLots, ref CCTagSellingFactor, ref CCTagPricePerCode, ref CCTagBinDescription );
+											
+										//Update Required Blank Tag fields to convert it to a regular tag.
+										edvCCTag_row.BeginEdit();
+										edvCCTag_row["RowMod"] = "U";
+										edvCCTag_row["PartNum"] = ScanPartNum;
+										edvCCTag_row["BinNum"] = ScanBinNum;
+										edvCCTag_row["CountedBy"] = edvUD101A_row["CountedBy_c"].ToString();
+										edvCCTag_row["CountedQty"] = (decimal)edvUD101A_row["CountedQty_c"];
+										edvCCTag_row["TagReturned"] = false;
+										edvCCTag_row["CountedDate"] = (DateTime)edvUD101A_row["CountedDate_c"];
+										edvCCTag_row["LotNum"] = ScanLotNum;
+										edvCCTag_row["UOM"] = CCTagPartIUM;
+										edvCCTag_row["EnableLotNo"] = CCTagTrackLots;
+										edvCCTag_row["UOMDO"] =  CCTagPartIUM;
+										edvCCTag_row["BinNumDescription"] = CCTagBinDescription;
+										edvCCTag_row["PartNumSalesUM"] =  CCTagPartIUM;
+										edvCCTag_row["PartNumIUM"] =  CCTagPartIUM;
+										edvCCTag_row["PartNumPartDescription"] =  CCTagPartDescription;
+										edvCCTag_row["PartNumTrackLots"] =  CCTagTrackLots;
+										edvCCTag_row["PartNumSellingFactor"] = CCTagSellingFactor;
+										edvCCTag_row["PartNumPricePerCode"] =  CCTagPricePerCode;	
+										edvCCTag_row.EndEdit(); 
+										
+										//Notify the Data Views of udpates.
+										this.edvCCTag.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCTag.Row, this.edvCCTag.Column));
+										
+										if (adapterCountTag.Update()) 
+										{ 
+											//EpiMessageBox.Show("Successfully updated");
+											
+											// Mark Count as counted.
+											edvUD101A_row.BeginEdit();
+											edvUD101A_row["RowMod"]= "U";
+											edvUD101A_row["AddedToTag_c"] = true;
+											edvUD101A_row.EndEdit();
+											
+											//Notify the Data Views of udpates.
+											this.edvUD101A.Notify(new EpiNotifyArgs(this.oTrans, this.edvUD101A.Row, this.edvUD101A.Column));
+											UpdateUD101ARow();
+											// Finish the loop as the match has been found.
+											break;
+										} 
+										else
+										{
+											EpiMessageBox.Show("Error: Not updated");
+										}
+									}
+								}
+							}
+						}
+					}
+				}	
+			}
+		}
+		else
+		{
+			MessageBox.Show("Error | No all counts have already been matched");
+			return;
+		}
+	}
+	
+	private void ValidateFields(
+		string WarehouseCode, 
+		string BinNum, 
+		string PartNum,
+		string LotNum,
+		ref bool ValidWhse,
+		ref bool ValidBin,
+		ref bool ValidPart,
+		ref bool ValidLot,
+		ref bool LotRequired
+		)
+	{
+		DynamicQueryAdapter queryAdapter = new DynamicQueryAdapter(this.oTrans);
+		queryAdapter.BOConnect();
+		
+		QueryExecutionDataSet parameters;
+		parameters = new QueryExecutionDataSet();
+		parameters.ExecutionParameter.AddExecutionParameterRow("WarehouseCode", WarehouseCode.ToString(), "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("BinNum", BinNum.ToString(), "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("PartNum", PartNum.ToString(), "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("LotNum", LotNum.ToString(), "nvarchar", false, Guid.NewGuid(),"A");
+
+		queryAdapter.ExecuteByID("AdvCycleCount_Fields", parameters);
+		
+		foreach (DataRow ResultRow in queryAdapter.QueryResults.Tables["Results"].Rows)
+		{
+			ValidWhse   = (bool)ResultRow["Calculated_ValidWhse"];
+			ValidBin    = (bool)ResultRow["Calculated_ValidBin"];
+			ValidPart   = (bool)ResultRow["Calculated_ValidPart"];
+			ValidLot    = (bool)ResultRow["Calculated_ValidLot"];
+			LotRequired = (bool)ResultRow["Calculated_LotRequired"];
+		}
+	}
+	
+	private void ValidateAllScans()
+	{
+		if(edvUD101A != null)
+		{
+			string WarehouseCode = "";
+			string BinNum = "";
+			string PartNum = "";
+			string LotNum = "";
+			
+			bool ValidWhse = false;
+			bool ValidBin = false;
+			bool ValidPart = false;
+			bool ValidLot = false;
+			bool LotRequired = false;
+			
+			//EpiMessageBox.Show("Testing Validationg.");
+			foreach (DataRow edvUD101A_row in edvUD101A.dataView.Table.Rows)
+			{		
+				WarehouseCode = edvUD101A_row["WarehouseCode_c"].ToString();
+				BinNum = edvUD101A_row["BinNum_c"].ToString();
+				PartNum = edvUD101A_row["PartNum_c"].ToString();
+				LotNum = edvUD101A_row["LotNum_c"].ToString();
+				
+				ValidWhse = false;
+				ValidBin = false;
+				ValidPart = false;
+				ValidLot = false;
+				LotRequired = false;
+				
+				ValidateFields(WarehouseCode, BinNum, PartNum, LotNum, ref ValidWhse, ref ValidBin, ref ValidPart, ref ValidLot, ref LotRequired);
+				
+				edvUD101A_row.BeginEdit();
+				edvUD101A_row["WhsValid_c"] = ValidWhse;
+				edvUD101A_row["BinValid_c"] = ValidBin;
+				edvUD101A_row["PartValid_c"] = ValidPart;
+				edvUD101A_row["LotValid_c"] = ValidLot;
+				edvUD101A_row["LotReq_c"] = LotRequired;
+				edvUD101A_row["RowMod"]= "U";
+				if (ValidWhse && ValidBin && ValidPart && (ValidLot || !LotRequired))
+				{
+					edvUD101A_row["ScanValid_c"] = true;
+				}
+				edvUD101A_row.EndEdit();
+				UpdateUD101ARow();
+				//if (ValidWhse == true) {EpiMessageBox.Show("Warehouse is valid.");} else {EpiMessageBox.Show("Warehouse is Invalid.");}
+			}
+			
+		}
+		else
+		{
+			EpiMessageBox.Show("There is no data in edvUD101A");
+		}
+	}
+	
+	private void GetNewBlankTagDetails(
+		string WarehouseCode, 
+		string BinNum, 
+		string PartNum,
+		ref string PartDescription, 
+		ref string PartIUM, 
+		ref bool TrackLots, 
+		ref decimal SellingFactor, 
+		ref string PricePerCode, 
+		ref string BinDescription
+		)
+	{
+		
+		DynamicQueryAdapter queryAdapter = new DynamicQueryAdapter(this.oTrans);
+		queryAdapter.BOConnect();
+		
+		QueryExecutionDataSet parameters;
+		parameters = new QueryExecutionDataSet();
+		parameters.ExecutionParameter.AddExecutionParameterRow("WarehouseCode", WarehouseCode.ToString(), "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("BinNum", BinNum.ToString(), "nvarchar", false, Guid.NewGuid(),"A");
+		parameters.ExecutionParameter.AddExecutionParameterRow("PartNum", PartNum.ToString(), "nvarchar", false, Guid.NewGuid(),"A");
+
+		queryAdapter.ExecuteByID("AdvCycleCount_NewBlankTagDtls", parameters);
+		
+		foreach (DataRow ResultRow in queryAdapter.QueryResults.Tables["Results"].Rows)
+		{
+			PartDescription =  ResultRow["Part_PartDescription"].ToString();
+			PartIUM = ResultRow["Part_IUM"].ToString();
+			TrackLots = (bool)ResultRow["Part_TrackLots"];
+			SellingFactor = (decimal)ResultRow["Part_SellingFactor"];
+			PricePerCode = ResultRow["Part_PricePerCode"].ToString();
+			BinDescription = ResultRow["WhseBin_Description"].ToString();
+		}
+	}
+	
+	private void UndoCCCountCycleChanges()
+	{
+		this.adapterCCCountCycle.CCCountCycleData.RejectChanges();
+
+		// Notify that data was updated.
+		this.edvCCHdr.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCHdr.Row, this.edvCCHdr.Column));
+		this.edvCCDtl.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCDtl.Row, this.edvCCDtl.Column));	
+	}
+	
+	private void UndoCountTagChanges()
+	{
+		this.adapterCountTag.CountTagData.RejectChanges();
+
+		// Notify that data was updated.
+		this.edvCCTag.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCTag.Row, this.edvCCTag.Column));
+	}
+
+	private void ClearCCCountCycleData()
+	{
+		this._SysRowIDCCHdr = string.Empty;
+
+		this.adapterCCCountCycle.CCCountCycleData.Clear();
+
+		// Notify that data was updated.
+		this.edvCCHdr.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCHdr.Row, this.edvCCHdr.Column));
+		this.edvCCDtl.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCDtl.Row, this.edvCCDtl.Column));
+	}
+
+	private void ClearCountTagData()
+	{
+		this.adapterCountTag.CountTagData.Clear();
+
+		// Notify that data was updated.
+		this.edvCCTag.Notify(new EpiNotifyArgs(this.oTrans, this.edvCCTag.Row, this.edvCCTag.Column));
+	}
+
+	private void baseToolbarsManager_ToolClickForCCHdr(object sender, Infragistics.Win.UltraWinToolbars.ToolClickEventArgs args)
+	{
+		// EpiMessageBox.Show(args.Tool.Key);
+		switch (args.Tool.Key)
+		{
+			case "ClearTool":
+				ClearScannedData();
+				ClearCCCountCycleData();
+				ClearCountTagData();
+				break;
+
+			case "UndoTool":
+				UndoCCCountCycleChanges();
+				UndoCountTagChanges();
+				break;
+		}
+	}
+
+	private void UD101Form_BeforeToolClickForCCHdr(object sender, Ice.Lib.Framework.BeforeToolClickEventArgs args)
+	{
+		// EpiMessageBox.Show(args.Tool.Key);
+		switch (args.Tool.Key)
+		{
+			case "SaveTool":
+				break;
+		}
+	}
+
+	private void UD101Form_AfterToolClickForCCHdr(object sender, Ice.Lib.Framework.AfterToolClickEventArgs args)
+	{
+		//EpiMessageBox.Show(args.Tool.Key);
+		switch (args.Tool.Key)
+		{
+			case "DeleteTool":
+
+				if ((args.Cancelled == false))
+				{
+					
+				}
+				break;
+		}
+	}
+
+	private void UD101_AfterRowChangeForCCHdr(EpiRowChangedArgs args)
+	{
+		// ** add AfterRowChange event handler
+		string key1 = args.CurrentView.dataView[args.CurrentRow]["Key1"].ToString();
+		GetCCHdrData(key1);
+	}
+
+	private void UD101_DataView_ListChangedForCCHdr(object sender, ListChangedEventArgs args)
+	{
+		string key1 = UD101_DataView[0]["Key1"].ToString();
+		GetCCHdrData(key1);
+	}
+
+	private void UD101_BeforeResetDataViewForCCHdr(object sender, EventArgs args)
+	{
+		// ** remove ListChanged event handler
+		this.UD101_DataView.ListChanged -= new ListChangedEventHandler(this.UD101_DataView_ListChangedForCCHdr);
+	}
+
+	private void UD101_AfterResetDataViewForCCHdr(object sender, EventArgs args)
+	{
+		// ** reassign DataView and add ListChanged event handler
+		this.UD101_DataView = this.UD101_Row.dataView;
+		this.UD101_DataView.ListChanged += new ListChangedEventHandler(this.UD101_DataView_ListChangedForCCHdr);
+	}
+
+	private void btnGetTags_Click(object sender, System.EventArgs args)
+	{
+		GetCountTagData();
+	}
+
+	private void SetExtendedProperties()
+	{
+		// Begin Wizard Added EpiDataView Initialization
+		EpiDataView edvUD101A = ((EpiDataView)(this.oTrans.EpiDataViews["UD101A"]));
+
+		if (edvUD101A.dataView.Table.Columns.Contains("ChildKey1"))
+		{
+			edvUD101A.dataView.Table.Columns["ChildKey1"].ExtendedProperties["ReadOnly"] = true;
+		}
+		if (edvUD101A.dataView.Table.Columns.Contains("ChildKey2"))
+		{
+			edvUD101A.dataView.Table.Columns["ChildKey2"].ExtendedProperties["ReadOnly"] = true;
+		}
+		if (edvUD101A.dataView.Table.Columns.Contains("ChildKey3"))
+		{
+			edvUD101A.dataView.Table.Columns["ChildKey3"].ExtendedProperties["ReadOnly"] = true;
+		}
+		if (edvUD101A.dataView.Table.Columns.Contains("ChildKey4"))
+		{
+			edvUD101A.dataView.Table.Columns["ChildKey4"].ExtendedProperties["ReadOnly"] = true;
+		}
+		if (edvUD101A.dataView.Table.Columns.Contains("ChildKey5"))
+		{
+			edvUD101A.dataView.Table.Columns["ChildKey5"].ExtendedProperties["ReadOnly"] = true;
+		}
+		if (edvUD101A.dataView.Table.Columns.Contains("CountedBy_c"))
+		{
+			edvUD101A.dataView.Table.Columns["CountedBy_c"].ExtendedProperties["ReadOnly"] = true;
+		}
+	}
+
+	private void edvUD101A_EpiViewNotification(EpiDataView view, EpiNotifyArgs args)
+	{
+		// ** Argument Properties and Uses **
+		// view.dataView[args.Row]["FieldName"]
+		// args.Row, args.Column, args.Sender, args.NotifyType
+		// NotifyType.Initialize, NotifyType.AddRow, NotifyType.DeleteRow, NotifyType.InitLastView, NotifyType.InitAndResetTreeNodes
+		
+		//MessageBox.Show(args.NotifyType.ToString());
+
+		if ((args.NotifyType == EpiTransaction.NotifyType.AddRow))
+		{
+			if ((args.Row > -1))
+			{
+				view.dataView[args.Row]["CountedBy_c"] = txtScannedBy.Text.ToString();
+				view.dataView[args.Row]["WarehouseCode_c"] = edvUD101.CurrentDataRow["WarehouseCode_c"].ToString();
+				view.dataView[args.Row]["BinNum_c"] = txtScanValue_Bin.Text.ToString();
+				view.dataView[args.Row]["CountedQty_c"] = txtScanValue_Qty.Text.ToString();
+				view.dataView[args.Row]["PartNum_c"] = txtScanValue_PartNum.Text.ToString();
+				view.dataView[args.Row]["LotNum_c"] = txtScanValue_Lot.Text.ToString();
+			}
+		}
+		SetDynamicBarcodeType();
+	}
+
+	private bool CheckIfBarcodeEntered()
+	// Checks if there is a value in the barcode field
+	{
+		Ice.Lib.Framework.EpiTextBox bc = (Ice.Lib.Framework.EpiTextBox)csm.GetNativeControlReference("7e040f1d-2e53-45db-b9b5-58e1ef03530f");
+		string barCodeStr = bc.Text;
+
+		if (barCodeStr.Length == 0)
+		{
+			return false; //No count row to add data to or no row to add barcode to
+		}
+		else 
+		{
+			return true;
+		}
+	}
+
+	private bool CheckUD101AHasData()
+	// Validates UD101A View has data in it
+	{
+		if (edvUD101ARow == null)
+		{
+			return false; //No count row to add data to or no row to add barcode to
+		}
+		else 
+		{
+			return true;
+		}
+	}
+
+	private void ProcessBarcode(string strBarcode)
+	// Figures out what the 2d barcode stands for
+	{
+		// Tests if Barcode is at least 36 characters long and contains no "+" characters. This identifies the 2d barcode
+		if ((strBarcode.Length >=36)  && strBarcode.IndexOf("+") ==-1)
+		{    
+			//System.Windows.Forms.MessageBox.Show("test len " + Convert.ToString(strBarcode.Length));
+			string qtyStr = strBarcode.Substring(0, 5);
+			decimal tranQty = decimal.Parse(qtyStr);
+			string product = strBarcode.Substring(5, 3);
+			string thickness = strBarcode.Substring(8, 1);
+			string bevel = strBarcode.Substring(9, 1);
+			string height = strBarcode.Substring(10, 4);
+			string form = strBarcode.Substring(14, 4);
+			string perf = strBarcode.Substring(18, 4);
+			string height2 = strBarcode.Substring(22, 3);
+			string special = strBarcode.Substring(25, 3);
+			string lot = strBarcode.Substring(29, 7);
+			string partNumber = product.Trim() + "-" + thickness.Trim() + "-" + bevel.Trim() + "-" + height.Trim() + "-" + form.Trim() + "-" + perf.Trim() + "-" + height2.Trim() + "-" + special.Trim();
+			
+			txtScanValue_PartNum.Text = partNumber;
+			txtScanValue_Lot.Text = "1";
+			txtScanValue_Qty.Text = tranQty.ToString();
+		}
+		else if ((strBarcode.Length>0) && strBarcode.IndexOf("+")>0)
+		{
+			int plus1 = strBarcode.IndexOf("+",0);
+			int plus2 = strBarcode.IndexOf("+",strBarcode.IndexOf("+",0)+1)-strBarcode.IndexOf("+",0);
+			int strBarcodeingLength = strBarcode.Length;
+			string qtyStr = strBarcode.Substring(0,plus1);
+			decimal tranQty = decimal.Parse(qtyStr);
+			string partNumber = strBarcode.Substring(plus1+1,plus2-1);
+			string lot = strBarcode.Substring(plus1+plus2+1,strBarcodeingLength - (plus1+plus2)-1);
+			
+			txtScanValue_PartNum.Text = partNumber;
+			txtScanValue_Lot.Text = lot;
+			txtScanValue_Qty.Text = tranQty.ToString();
+		}
+		else // Barcode too short while containing no "+".
+		{
+			if (TryParseNumaric(txtScanEntry.Text))
+			{
+				txtScanValue_Qty.Text = ParseNumaric(txtScanEntry.Text).ToString();
+			}
+		}	
+	}
+	
+	private decimal ParseNumaric(string TestNumber)
+	{
+		decimal ParsedNumber = 0;
+		decimal.TryParse(TestNumber, out ParsedNumber);
+		return ParsedNumber;
+	}
+	
+	private bool TryParseNumaric(string TestNumber)
+	{
+		decimal ParsedNumber = 0;
+		return decimal.TryParse(TestNumber, out ParsedNumber);
+	}
+
+	private void eucBinList_BeforeDropDown(object sender, System.ComponentModel.CancelEventArgs args)
+	// Generates list of Bins for dropdown
+	{
+		// ** Place Event Handling Code Here **
+
+		string UD101Key1 = edvUD101.CurrentDataRow["Key1"].ToString();
+		
+		try
+		{ 
+			DynamicQueryAdapter queryAdapter = new DynamicQueryAdapter(this.oTrans);
+			queryAdapter.BOConnect();
+			string queryID = "UD101_BinList";
+			
+			QueryExecutionDataSet parameters = new QueryExecutionDataSet();
+			parameters.ExecutionParameter.AddExecutionParameterRow("UD101_GUID", UD101Key1.ToString(), "nvarchar", false, Guid.NewGuid(),"A");
+		
+			queryAdapter.ExecuteByID(queryID, parameters);
+			if(queryAdapter.QueryResults.Tables["Results"].Rows.Count > 0)
+			{
+				eucBinList.DataSource = queryAdapter.QueryResults.Tables["Results"];
+				eucBinList.ValueMember = "UD101A_BinNum_c";
+				eucBinList.DisplayMember = "UD101A_BinNum_c";
+			}
+		}
+		catch (System.Exception ex) 
+		{ 
+			//ExceptionBox.Show(ex); 
+		}
+	}
+	
+	private bool ValidateAllRequiredFieldsEntered()
+	// Validates that all fields that are required for the scan are entered
+	{
+		if ( txtScanValue_Bin.Text == "" 
+		|| txtScanValue_Qty.Text == "" 
+		|| txtScanValue_PartNum.Text == "" 
+		|| txtScanValue_Lot.Text == ""
+		)
+		{
+			
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	private void ClearAllScannedData()
+	{
+		txtScanEntry.Text = "";
+		txtScanValue_Bin.Text = "";
+		txtScanValue_PartNum.Text = "";
+		txtScanValue_Qty.Text = "";
+		txtScanValue_Lot.Text = "";
+		SetDynamicBarcodeType();
+	}
+	
+	private void ClearScannedData()
+	{
+		txtScanEntry.Text = "";
+		txtScanValue_PartNum.Text = "";
+		txtScanValue_Qty.Text = "";
+		txtScanValue_Lot.Text = "";
+		SetDynamicBarcodeType();
+	}
+	
+	private void SetDynamicBarcodeType()
+	{
+		if(edvUD101.CurrentDataRow == null)
+		{
+			txtScanType.Text = "No Cycle Count Selected";
+		}
+		else if ( txtScanValue_Bin.Text == "")
+		{
+			txtScanType.Text = "Bin Barcode";
+		} 
+		else if ( txtScanValue_Qty.Text == "")
+		{
+			txtScanType.Text = "2D Legacy or Qty Barcode";
+		} 
+		else if ( txtScanValue_PartNum.Text == "")
+		{
+			txtScanType.Text = "Part Barcode";
+		} 
+		else if ( txtScanValue_Lot.Text == "")
+		{
+			txtScanType.Text = "Lot Barcode";
+		} 
+	}
+	
+	private bool SubmitScannedData()
+	{
+		if (edvUD101.CurrentDataRow != null && ValidateAllRequiredFieldsEntered() == true)
+		{
+			//EpiMessageBox.Show("Submitting scanned values");
+			oTrans.GetNewChild();
+			if (UpdateUD101ARow())
+			{
+				ClearScannedData();
+				return false;
+			}
+			else
+			{
+				oTrans.Undo();
+				return true;
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
+	
+	private bool UpdateUD101ARow()
+	{
+		try
+		{
+			oTrans.Update();
+			return true;
+		}
+		catch (System.Exception e)
+		{
+    		// recover from exception
+			EpiMessageBox.Show("There was an issue saving the record");
+			return false;
+		}
+	}
+
+	private void txtScanEntry_Leave(object sender, System.EventArgs args)
+	{
+		
+		// Stop forced refocus if scan value is blank
+		if (txtScanEntry.Text == "")
+		{
+			return;
+		} 
+		// Scan for redirections
+		else if (txtScanEntry.Text == "~Submit")
+		{
+			SubmitScannedData();
+		}
+		else if (txtScanEntry.Text == "~Clear")
+		{
+			ClearAllScannedData();
+		} else if (txtScanEntry.Text == "~Part")
+		{
+			txtScanType.Text = "Part Barcode";
+			txtScanEntry.Text = "";
+		} else if (txtScanEntry.Text == "~Lot")
+		{
+			txtScanType.Text = "Lot Barcode";
+			txtScanEntry.Text = "";
+		} else if (txtScanEntry.Text == "~Bin")
+		{
+			txtScanType.Text = "Bin Barcode";
+			txtScanEntry.Text = "";
+		} else if (txtScanEntry.Text == "~Qty")
+		{
+			txtScanType.Text = "Qty Barcode";
+			txtScanEntry.Text = "";
+		} else 
+		{
+			// Proccess Scanned Barcodes by Type
+			if (txtScanType.Text == "2D Legacy or Qty Barcode")
+			{
+				ProcessBarcode(txtScanEntry.Text);
+			} 
+			else if (txtScanType.Text == "Part Barcode")
+			{
+				txtScanValue_PartNum.Text = txtScanEntry.Text;
+			} else if (txtScanType.Text == "Lot Barcode")
+			{
+				txtScanValue_Lot.Text = txtScanEntry.Text;
+			} else if (txtScanType.Text == "Bin Barcode")
+			{
+				txtScanValue_Bin.Text = txtScanEntry.Text;
+			} else if (txtScanType.Text == "Qty Barcode")
+			{
+				txtScanValue_Qty.Text = txtScanEntry.Text;
+			} 
+			
+			SubmitScannedData();
+			SetDynamicBarcodeType();
+		}
+		txtScanEntry.Text="";
+		txtScanEntry.Focus();
+	}
+
+	private void txtScanValue_Lot_Leave(object sender, System.EventArgs args)
+	{
+		if ( txtScanValue_Lot.Text != "")
+		{
+			SubmitScannedData();
+			txtScanEntry.Focus();
+		} else {
+			SetDynamicBarcodeType();
+			txtScanEntry.Focus();
+			return;
+		}
+	}
+
+	private void txtScanValue_Bin_Leave(object sender, System.EventArgs args)
+	{
+		if ( txtScanValue_Bin.Text != "")
+		{
+			SubmitScannedData();
+			txtScanEntry.Focus();
+		} else {
+			SetDynamicBarcodeType();
+			return;
+		}
+	}
+
+	private void txtScanValue_PartNum_Leave(object sender, System.EventArgs args)
+	{
+		if ( txtScanValue_PartNum.Text != "")
+		{
+			SubmitScannedData();
+			txtScanEntry.Focus();
+		} else {
+			SetDynamicBarcodeType();
+			return; 
+		}
+	}
+
+	private void txtScanValue_Qty_Leave(object sender, System.EventArgs args)
+	{
+		if ( txtScanValue_Qty.Text != "")
+		{
+			SubmitScannedData();
+			txtScanEntry.Focus();
+		} else {
+			SetDynamicBarcodeType();
+			return;
+		}
+	}
+
+	private void btnAddBlankTag_Click(object sender, System.EventArgs args)
+	{
+		CreateBlankTag();
+	}
+}
