@@ -460,7 +460,7 @@ public class Script
 		adapterCountTag.Update();
 		
 		UpdateUD101ARow();
-		//GetCountTagData();
+		GetCountTagData();
 	}
 	
 	private void btnMatchScans_Click(object sender, System.EventArgs args)
@@ -1254,117 +1254,195 @@ public class Script
 		}
 	}
 
-	private void txtScanEntry_Leave(object sender, System.EventArgs args)
+	private void txtScanEntry_Leave(object sender, EventArgs args)
 	{
-		
-		// Stop forced refocus if scan value is blank
-		if (txtScanEntry.Text == "")
+		try
 		{
-			return;
-		} 
-		// Scan for redirections
-		else if (txtScanEntry.Text == "~Submit")
-		{
-			SubmitScannedData();
+			// Store the scanned text before clearing the field.
+			string scannedText = txtScanEntry.Text;
+
+			// Check if the scanned text is empty or null.
+			if (string.IsNullOrEmpty(scannedText))
+			{
+				return;
+			}
+
+			// Check the scanned text against a list of special commands.
+			switch (scannedText)
+			{
+				case "~Submit":
+					SubmitScannedData();
+					break;
+
+				case "~Clear":
+					ClearAllScannedData();
+					break;
+
+				case "~Part":
+					txtScanType.Text = "Part Barcode";
+					break;
+
+				case "~Lot":
+					txtScanType.Text = "Lot Barcode";
+					break;
+
+				case "~Bin":
+					txtScanType.Text = "Bin Barcode";
+					break;
+
+				case "~Qty":
+					txtScanType.Text = "Qty Barcode";
+					break;
+
+				default:
+					// Check the current scan type and process the scanned text accordingly.
+					switch (txtScanType.Text)
+					{
+						case "2D Legacy or Qty Barcode":
+							ProcessBarcode(scannedText);
+							break;
+
+						case "Part Barcode":
+							txtScanValue_PartNum.Text = scannedText;
+							break;
+
+						case "Lot Barcode":
+							txtScanValue_Lot.Text = scannedText;
+							break;
+
+						case "Bin Barcode":
+							txtScanValue_Bin.Text = scannedText;
+							break;
+
+						case "Qty Barcode":
+							txtScanValue_Qty.Text = scannedText;
+							break;
+
+						default:
+							// Throw an exception if the scan type is invalid.
+							throw new Exception("Invalid scan type: " + txtScanType.Text);
+					}
+
+					// Submit the scanned data and set the dynamic barcode type.
+					SubmitScannedData();
+					SetDynamicBarcodeType();
+					break;
+			}
+
+			// Clear the scanned text and focus on the text box.
+			txtScanEntry.Text = "";
+			txtScanEntry.Select();
 		}
-		else if (txtScanEntry.Text == "~Clear")
+		catch (Exception ex)
 		{
-			ClearAllScannedData();
-		} else if (txtScanEntry.Text == "~Part")
-		{
-			txtScanType.Text = "Part Barcode";
-			txtScanEntry.Text = "";
-		} else if (txtScanEntry.Text == "~Lot")
-		{
-			txtScanType.Text = "Lot Barcode";
-			txtScanEntry.Text = "";
-		} else if (txtScanEntry.Text == "~Bin")
-		{
-			txtScanType.Text = "Bin Barcode";
-			txtScanEntry.Text = "";
-		} else if (txtScanEntry.Text == "~Qty")
-		{
-			txtScanType.Text = "Qty Barcode";
-			txtScanEntry.Text = "";
-		} else 
-		{
-			// Proccess Scanned Barcodes by Type
-			if (txtScanType.Text == "2D Legacy or Qty Barcode")
-			{
-				ProcessBarcode(txtScanEntry.Text);
-			} 
-			else if (txtScanType.Text == "Part Barcode")
-			{
-				txtScanValue_PartNum.Text = txtScanEntry.Text;
-			} else if (txtScanType.Text == "Lot Barcode")
-			{
-				txtScanValue_Lot.Text = txtScanEntry.Text;
-			} else if (txtScanType.Text == "Bin Barcode")
-			{
-				txtScanValue_Bin.Text = txtScanEntry.Text;
-			} else if (txtScanType.Text == "Qty Barcode")
-			{
-				txtScanValue_Qty.Text = txtScanEntry.Text;
-			} 
-			
-			SubmitScannedData();
-			SetDynamicBarcodeType();
+			// Display an error message if an exception is caught.
+			MessageBox.Show("An error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
-		txtScanEntry.Text="";
-		txtScanEntry.Focus();
 	}
 
 	private void txtScanValue_Lot_Leave(object sender, System.EventArgs args)
 	{
-		if ( txtScanValue_Lot.Text != "")
+		try
 		{
+			// Store the current value of the text box.
+			string scanValue = txtScanValue_Lot.Text;
+
+			// Check if the scanned text is empty or null.
+			if (string.IsNullOrEmpty(scanValue))
+			{
+				SetDynamicBarcodeType();
+				return;
+			}
+
+			// Submit the scanned data and set focus on the scan entry text box.
 			SubmitScannedData();
-			txtScanEntry.Focus();
-		} else {
-			SetDynamicBarcodeType();
-			txtScanEntry.Focus();
-			return;
+			txtScanEntry.Select();
+		}
+		catch (Exception ex)
+		{
+			// Display an error message if an exception is caught.
+			MessageBox.Show("An error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 	}
 
 	private void txtScanValue_Bin_Leave(object sender, System.EventArgs args)
 	{
-		if ( txtScanValue_Bin.Text != "")
+		try
 		{
+			// Store the current value of the text box.
+			string scanValue = txtScanValue_Bin.Text;
+
+			// Check if the scanned text is empty or null.
+			if (string.IsNullOrEmpty(scanValue))
+			{
+				SetDynamicBarcodeType();
+				return;
+			}
+
+			// Submit the scanned data and set focus on the scan entry text box.
 			SubmitScannedData();
-			txtScanEntry.Focus();
-		} else {
-			SetDynamicBarcodeType();
-			return;
+			txtScanEntry.Select();
+		}
+		catch (Exception ex)
+		{
+			// Display an error message if an exception is caught.
+			MessageBox.Show("An error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 	}
 
 	private void txtScanValue_PartNum_Leave(object sender, System.EventArgs args)
 	{
-		if ( txtScanValue_PartNum.Text != "")
+		try
 		{
+			// Store the current value of the text box.
+			string scanValue = txtScanValue_PartNum.Text;
+
+			// Check if the scanned text is empty or null.
+			if (string.IsNullOrEmpty(scanValue))
+			{
+				SetDynamicBarcodeType();
+				return;
+			}
+
+			// Submit the scanned data and set focus on the scan entry text box.
 			SubmitScannedData();
-			txtScanEntry.Focus();
-		} else {
-			SetDynamicBarcodeType();
-			return; 
+			txtScanEntry.Select();
+		}
+		catch (Exception ex)
+		{
+			// Display an error message if an exception is caught.
+			MessageBox.Show("An error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 	}
 
 	private void txtScanValue_Qty_Leave(object sender, System.EventArgs args)
 	{
-		if ( txtScanValue_Qty.Text != "")
+		try
 		{
+			// Store the current value of the text box.
+			string scanValue = txtScanValue_Qty.Text;
+
+			// Check if the scanned text is empty or null.
+			if (string.IsNullOrEmpty(scanValue))
+			{
+				SetDynamicBarcodeType();
+				return;
+			}
+
+			// Submit the scanned data and set focus on the scan entry text box.
 			SubmitScannedData();
-			txtScanEntry.Focus();
-		} else {
-			SetDynamicBarcodeType();
-			return;
+			txtScanEntry.Select();
+		}
+		catch (Exception ex)
+		{
+			// Display an error message if an exception is caught.
+			MessageBox.Show("An error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 	}
 
 	private void btnAddBlankTag_Click(object sender, System.EventArgs args)
 	{
+		// Call the method to create a new blank tag.
 		CreateBlankTag();
 	}
 }
